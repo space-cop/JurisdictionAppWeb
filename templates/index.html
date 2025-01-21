@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Your Local Law Enforcement Agency</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #query {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        #suggestions {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #ccc;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        #suggestions li {
+            padding: 10px;
+            cursor: pointer;
+        }
+        #suggestions li:hover {
+            background-color: #f0f0f0;
+        }
+        .result {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Find Your Local Law Enforcement Agency</h1>
+    <input type="text" id="query" placeholder="Enter address here..." autocomplete="off">
+    <ul id="suggestions"></ul>
+    <div id="results"></div>
+
+    <script>
+        const queryInput = document.getElementById('query');
+        const suggestionsList = document.getElementById('suggestions');
+        const resultsDiv = document.getElementById('results');
+
+        // Fetch autocomplete suggestions
+        queryInput.addEventListener('input', async () => {
+            const query = queryInput.value.trim();
+            if (query.length === 0) {
+                suggestionsList.innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                const suggestions = await response.json();
+                suggestionsList.innerHTML = suggestions.map(suggestion => `
+                    <li>${suggestion.street}, ${suggestion.city}, ${suggestion.state} ${suggestion.zip}</li>
+                `).join('');
+
+                // Add click event to suggestions
+                document.querySelectorAll('#suggestions li').forEach(item => {
+                    item.addEventListener('click', () => {
+                        queryInput.value = item.textContent;
+                        suggestionsList.innerHTML = '';
+                        fetchResults(queryInput.value);
+                    });
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        // Fetch results for a selected address
+        async function fetchResults(query) {
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                const results = await response.json();
+                if (results.length > 0) {
+                    resultsDiv.innerHTML = results.map(result => `
+                        <div class="result">
+                            <p><strong>Address:</strong> ${result.street}, ${result.city}, ${result.state} ${result.zip}</p>
+                            <p><strong>Agency:</strong> ${result.agency_name}</p>
+                            <p><strong>Phone:</strong> ${result.agency_phone}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<p>No results found for the given address.</p>';
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
